@@ -36,6 +36,11 @@ jobs:
         run: |
           mkdir -p dist
           cp web/index.html dist/index.html
+          cp web/manifest.webmanifest dist/manifest.webmanifest
+          cp web/sw.js dist/sw.js
+          mkdir -p dist/icons
+          cp web/icons/icon.svg dist/icons/icon.svg
+          curl -L --fail https://not-fl3.github.io/macroquad-js/mq_js_bundle.js -o dist/mq_js_bundle.js
           cp target/wasm32-unknown-unknown/release/last_stand_rust.wasm dist/last_stand_rust.wasm
           touch dist/.nojekyll
 
