@@ -4,25 +4,71 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
   <meta name="theme-color" content="#101612">
-  <meta name="description" content="Last Stand: Zombie Apocalypse — first-person survival game built with Rust.">
+  <meta name="description" content="Last Stand: Zombie Apocalypse — mobile-first Rust survival game.">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="LAST STAND">
+  <meta name="application-name" content="LAST STAND">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
   <title>LAST STAND — Zombie Apocalypse</title>
   <style>
-    *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#101612;color:#e8e8dc;font-family:system-ui,sans-serif;touch-action:none}
-    body{display:flex;align-items:center;justify-content:center}canvas{width:100vw;height:100vh;display:block;outline:none;touch-action:none}
-    #loading{position:fixed;inset:0;display:grid;place-content:center;text-align:center;background:#101612;z-index:2}
+    :root{color-scheme:dark;--safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px)}
+    *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;height:100dvh;overflow:hidden;background:#101612;color:#e8e8dc;font-family:system-ui,-apple-system,sans-serif;touch-action:none;overscroll-behavior:none;user-select:none;-webkit-user-select:none}
+    body{position:fixed;inset:0;display:block;padding:0}canvas{width:100%;height:100%;display:block;outline:none;touch-action:none;image-rendering:auto}
+    #loading{position:fixed;inset:0;display:grid;place-content:center;text-align:center;background:#101612;z-index:5;padding:24px}
     #loading h1{letter-spacing:.14em;font-size:clamp(24px,5vw,48px);margin:0;color:#d8d6bd}
     #loading p{color:#a6aa9b}#bar{height:4px;background:#353d33;margin:18px auto;width:min(260px,70vw);overflow:hidden}#bar:after{content:"";display:block;height:100%;width:35%;background:#b5a36b;animation:load 1.2s infinite ease-in-out}
     @keyframes load{from{transform:translateX(-110%)}to{transform:translateX(310%)}}
+    #install{position:fixed;z-index:4;top:calc(var(--safe-top) + 10px);right:12px;border:1px solid #9f956c;border-radius:22px;padding:10px 14px;background:#202a22;color:#f4edcf;font-weight:700;font-size:13px;box-shadow:0 4px 18px #0008;touch-action:manipulation}
+    #install:active{transform:scale(.96)}#hint{position:fixed;z-index:4;left:12px;top:calc(var(--safe-top) + 12px);font-size:11px;color:#c3c5b6;background:#101612aa;padding:8px 10px;border-radius:10px;pointer-events:none}
+    #install-help{display:none;position:fixed;z-index:8;inset:0;background:#000b;align-items:center;justify-content:center;padding:22px}
+    #install-help article{max-width:360px;background:#1b241d;border:1px solid #8f875e;border-radius:18px;padding:22px;line-height:1.5}
+    #install-help button{width:100%;padding:12px;border:0;border-radius:10px;background:#b6a36a;color:#151811;font-weight:800;margin-top:12px}
+    @media(orientation:landscape) and (max-height:500px){#hint{display:none}#install{padding:7px 11px;font-size:11px}}
   </style>
 </head>
 <body>
-  <div id="loading"><h1>LAST STAND</h1><p>Entering the quarantine zone…</p><div id="bar"></div></div>
+  <div id="loading"><h1>LAST STAND</h1><p>Preparing mobile survival zone…</p><div id="bar"></div></div>
+  <div id="hint">LANDSCAPE RECOMMENDED · TOUCH CONTROLS</div>
+  <button id="install" type="button">＋ INSTALL GAME</button>
+  <div id="install-help"><article><h2>Install LAST STAND</h2><p id="install-text">Add this game to your home screen for a full-screen app-like experience.</p><button id="close-help">GOT IT</button></article></div>
   <canvas id="glcanvas" tabindex="0"></canvas>
-  <script src="https://not-fl3.github.io/macroquad-js/mq_js_bundle.js"></script>
+  <script src="./mq_js_bundle.js"></script>
   <script>
-    load("last_stand_rust.wasm");
-    document.getElementById("glcanvas").addEventListener("click",()=>document.getElementById("glcanvas").focus());
-    window.addEventListener("load",()=>setTimeout(()=>{document.getElementById("loading").style.display="none"},1800));
+    const canvas=document.getElementById('glcanvas');
+    const installBtn=document.getElementById('install');
+    const help=document.getElementById('install-help');
+    const helpText=document.getElementById('install-text');
+    let deferredPrompt=null;
+    const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isStandalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
+    if(isStandalone) installBtn.style.display='none';
+    window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();deferredPrompt=event;});
+    installBtn.addEventListener('click',async()=>{
+      if(isStandalone){return;}
+      if(deferredPrompt){
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+        deferredPrompt=null;
+        installBtn.style.display='none';
+      }else{
+        helpText.textContent=isIOS
+          ? 'В Safari нажми «Поделиться» (квадрат со стрелкой вверх), прокрути меню и выбери «На экран Домой» → «Добавить».'
+          : 'Открой меню браузера (⋮ или Поделиться) и выбери «Установить приложение» или «Добавить на главный экран». Название пункта зависит от браузера.';
+        help.style.display='flex';
+      }
+    });
+    document.getElementById('close-help').addEventListener('click',()=>help.style.display='none');
+    document.addEventListener('contextmenu',e=>e.preventDefault());
+    document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});
+    window.addEventListener('load',()=>setTimeout(()=>{document.getElementById('loading').style.display='none';canvas.focus();},1200));
+    if('serviceWorker' in navigator && location.protocol!=='file:'){
+      window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(err=>console.warn('Offline cache unavailable',err)));
+    }
+    load('last_stand_rust.wasm');
   </script>
 </body>
 </html>
