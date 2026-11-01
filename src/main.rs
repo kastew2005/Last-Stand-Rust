@@ -13,7 +13,7 @@ fn window_conf() -> Conf {
         window_title: "LAST STAND: ZOMBIE APOCALYPSE".to_owned(),
         window_width: 1280,
         window_height: 720,
-        high_dpi: true,
+        high_dpi: false,
         fullscreen: false,
         ..Default::default()
     }
@@ -62,6 +62,9 @@ async fn main() {
     ];
     let mut game_over = false;
     let mut started = false;
+    let mut last_look_touch: Option<(u64, Vec2)> = None;
+    let mut touch_fire = false;
+    let mut touch_reload = false;
 
     loop {
         let dt = get_frame_time().min(0.05);
@@ -93,31 +96,52 @@ async fn main() {
             if !touch_mode {
                 yaw -= mouse_delta_position().x * 2.2;
                 pitch = (pitch + mouse_delta_position().y * 2.0).clamp(-1.25, 1.25);
-            } else if is_mouse_button_down(MouseButton::Left) && mouse_position().0 > sw * 0.38 {
-                let delta = mouse_delta_position();
-                yaw -= delta.x * 2.0;
-                pitch = (pitch + delta.y * 1.8).clamp(-1.1, 1.1);
             }
 
             let forward = vec3(yaw.sin(), 0.0, -yaw.cos());
             let right = vec3(forward.z, 0.0, -forward.x);
             let mut movement = Vec3::ZERO;
-            if is_key_down(KeyCode::W) || (touch_mode && is_mouse_button_down(MouseButton::Left) && mouse_position().0 < sw * 0.38 && mouse_position().1 < sh * 0.78) { movement += forward; }
+            touch_fire = false;
+            touch_reload = false;
+            if touch_mode {
+                let active = touches();
+                let mut look_now: Option<(u64, Vec2)> = None;
+                for t in active.iter() {
+                    let p = t.position;
+                    if p.x < sw * 0.43 && p.y > sh * 0.48 {
+                        let center = vec2(sw * 0.19, sh * 0.79);
+                        let v = p - center;
+                        if v.length() > 10.0 {
+                            movement += (right * (v.x / 62.0) - forward * (v.y / 62.0)).clamp_length_max(1.0);
+                        }
+                    } else if p.x > sw * 0.55 {
+                        if let Some((id, last)) = last_look_touch {
+                            if id == t.id {
+                                let delta = p - last;
+                                yaw -= delta.x * 0.010;
+                                pitch = (pitch - delta.y * 0.008).clamp(-1.1, 1.1);
+                            }
+                        }
+                        look_now = Some((t.id, p));
+                    }
+                }
+                last_look_touch = look_now;
+                for t in active.iter() {
+                    if t.phase == TouchPhase::Started {
+                        if t.position.x > sw - 112.0 && t.position.y > sh - 145.0 { touch_fire = true; }
+                        if t.position.x > sw - 220.0 && t.position.x <= sw - 112.0 && t.position.y > sh - 105.0 { touch_reload = true; }
+                    }
+                }
+            }
+            if is_key_down(KeyCode::W) { movement += forward; }
             if is_key_down(KeyCode::S) { movement -= forward; }
             if is_key_down(KeyCode::A) { movement -= right; }
             if is_key_down(KeyCode::D) { movement += right; }
-            if touch_mode && is_mouse_button_down(MouseButton::Left) && mouse_position().0 < sw * 0.38 {
-                let (mx, my) = mouse_position();
-                let center = vec2(sw * 0.19, sh * 0.84);
-                let v = vec2(mx, my) - center;
-                if v.length() > 12.0 { movement += (right * (v.x / 75.0) - forward * (v.y / 75.0)).clamp_length_max(1.0); }
-            }
             if movement.length() > 0.0 { player += movement.normalize() * 5.0 * dt; }
             player.x = player.x.clamp(-WORLD, WORLD);
             player.z = player.z.clamp(-WORLD, WORLD);
 
-            let firing = is_mouse_button_pressed(MouseButton::Left) && (!touch_mode || mouse_position().0 > sw * 0.42)
-                || is_key_pressed(KeyCode::Space);
+            let firing = (!touch_mode && is_mouse_button_pressed(MouseButton::Left)) || touch_fire || is_key_pressed(KeyCode::Space);
             if firing && fire_cooldown <= 0.0 && ammo > 0 {
                 ammo -= 1; fire_cooldown = 0.28;
                 let dir = vec3(yaw.sin() * pitch.cos(), pitch.sin(), -yaw.cos() * pitch.cos());
@@ -135,7 +159,7 @@ async fn main() {
                     if zombies[i].hp <= 0.0 { zombies.remove(i); kills += 1; score += 100; }
                 }
             }
-            if is_key_pressed(KeyCode::R) { ammo = 12; }
+            if is_key_pressed(KeyCode::R) || touch_reload { ammo = 12; }
 
             for z in zombies.iter_mut() {
                 let to = player - z.pos;
@@ -198,11 +222,17 @@ async fn main() {
         draw_text("+", sw * 0.5 - 7.0, sh * 0.5 + 8.0, 25.0, WHITE);
 
         if touch_mode {
-            draw_circle_lines(sw * 0.19, sh * 0.84, 54.0, 2.0, Color::new(0.8, 0.8, 0.8, 0.5));
-            draw_circle(sw * 0.19, sh * 0.84, 18.0, Color::new(0.8, 0.8, 0.8, 0.3));
-            draw_circle(sw - 64.0, sh - 85.0, 43.0, Color::new(0.55, 0.12, 0.10, 0.75));
-            draw_text("FIRE", sw - 88.0, sh - 78.0, 19.0, WHITE);
-            draw_text("DRAG RIGHT SIDE TO LOOK", sw * 0.5 - 105.0, sh - 18.0, 14.0, LIGHTGRAY);
+            // Large, thumb-friendly mobile control zones.
+            draw_circle_lines(sw * 0.19, sh * 0.79, 58.0, 3.0, Color::new(0.82, 0.84, 0.78, 0.58));
+            draw_circle(sw * 0.19, sh * 0.79, 22.0, Color::new(0.82, 0.84, 0.78, 0.25));
+            draw_text("MOVE", sw * 0.19 - 27.0, sh * 0.79 + 88.0, 16.0, LIGHTGRAY);
+            draw_circle(sw - 62.0, sh - 91.0, 48.0, Color::new(0.58, 0.12, 0.10, 0.88));
+            draw_circle_lines(sw - 62.0, sh - 91.0, 48.0, 3.0, GOLD);
+            draw_text("FIRE", sw - 88.0, sh - 84.0, 20.0, WHITE);
+            draw_circle(sw - 172.0, sh - 62.0, 30.0, Color::new(0.20, 0.25, 0.22, 0.9));
+            draw_circle_lines(sw - 172.0, sh - 62.0, 30.0, 2.0, GOLD);
+            draw_text("R", sw - 179.0, sh - 54.0, 22.0, WHITE);
+            draw_text("DRAG RIGHT HALF TO LOOK", sw * 0.5 - 100.0, sh - 16.0, 13.0, LIGHTGRAY);
         }
         if damage_flash > 0.0 { draw_rectangle(0.0, 0.0, sw, sh, Color::new(0.7, 0.0, 0.0, damage_flash * 0.35)); }
 
