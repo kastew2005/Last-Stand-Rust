@@ -94,12 +94,23 @@
       }
     }
 
-    window.addEventListener('load',()=>{
+    let bootStarted=false;
+    function startApp(){
+      if(bootStarted)return;
+      bootStarted=true;
       if('serviceWorker' in navigator && location.protocol!=='file:'){
         navigator.serviceWorker.register('./sw.js').catch(err=>console.warn('Offline cache unavailable:',err));
       }
       boot();
-    });
+    }
+    // Запускаем игру сразу после разбора HTML, не ожидая полной загрузки всех ресурсов.
+    if(document.readyState==='loading'){
+      document.addEventListener('DOMContentLoaded',startApp,{once:true});
+    }else{
+      startApp();
+    }
+    // Запасной запуск для мобильных Safari, если событие готовности задержалось.
+    setTimeout(startApp,1500);
   </script>
 </body>
 </html>
