@@ -36,6 +36,7 @@ jobs:
         run: |
           mkdir -p dist
           cp web/index.html dist/index.html
+          cp web/mq_js_bundle.js dist/mq_js_bundle.js
           cp web/manifest.webmanifest dist/manifest.webmanifest
           cp web/sw.js dist/sw.js
           mkdir -p dist/icons
