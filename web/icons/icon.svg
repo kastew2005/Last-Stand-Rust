@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#29382d"/><stop offset="1" stop-color="#0c120e"/></linearGradient><linearGradient id="metal" x2="0" y2="1"><stop stop-color="#e0d6ae"/><stop offset="1" stop-color="#8e875e"/></linearGradient></defs>
+<rect width="512" height="512" rx="112" fill="url(#bg)"/>
+<path d="M0 360 135 245l65 52 100-120 212 170v165H0Z" fill="#111914"/>
+<path d="M100 365V200l75-58 76 58v165M175 142V85l48 0v93M310 365V155l80-60 78 60v210" fill="#364239" stroke="#8b947e" stroke-width="12" stroke-linejoin="round"/>
+<path d="M130 225h32v44h-32zm72 0h32v44h-32zm143-18h34v44h-34zm58 0h34v44h-34z" fill="#c6b879"/>
+<path d="M160 355V285h64v70M350 355v-78h48v78" fill="#111914" stroke="#9d9a7a" stroke-width="8"/>
+<path d="M256 90 288 150l-32-12-32 12z" fill="url(#metal)"/>
+<text x="256" y="435" fill="#e4d9b4" font-family="Arial,sans-serif" font-size="54" font-weight="900" text-anchor="middle" letter-spacing="8">LAST</text>
+<text x="256" y="478" fill="#b5a36b" font-family="Arial,sans-serif" font-size="28" font-weight="700" text-anchor="middle" letter-spacing="12">STAND</text>
+</svg>
